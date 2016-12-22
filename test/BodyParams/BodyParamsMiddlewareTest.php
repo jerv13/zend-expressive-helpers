@@ -8,6 +8,7 @@
 namespace ZendTest\Expressive\Helper\BodyParams;
 
 use PHPUnit_Framework_TestCase as TestCase;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Zend\Diactoros\Response;
 use Zend\Diactoros\ServerRequest;
@@ -165,12 +166,6 @@ class BodyParamsMiddlewareTest extends TestCase
     {
         $expectedException = new MalformedRequestBodyException('malformed request body');
 
-        $this->setExpectedException(
-            get_class($expectedException),
-            $expectedException->getMessage(),
-            $expectedException->getCode()
-        );
-
         $middleware = $this->bodyParams;
         $serverRequest = new ServerRequest([], [], '', 'PUT', $this->body, ['Content-type' => 'foo/bar']);
         $strategy = $this->prophesize(StrategyInterface::class);
@@ -178,12 +173,17 @@ class BodyParamsMiddlewareTest extends TestCase
         $strategy->parse($serverRequest)->willThrow($expectedException);
         $middleware->addStrategy($strategy->reveal());
 
-        $middleware($serverRequest, new Response(),
+        $triggered = false;
+
+        /** @var ResponseInterface $response */
+        $response = $middleware($serverRequest, new Response(),
             function ($request, $response) use (&$triggered) {
                 $triggered = true;
                 return $response;
             }
         );
+
+        $this->assertTrue($response->getStatusCode() === 400, 'Status should be 400!');
 
         $this->assertFalse($triggered, 'Next should not have been triggered!');
     }
