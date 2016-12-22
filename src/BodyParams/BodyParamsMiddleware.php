@@ -9,6 +9,7 @@ namespace Zend\Expressive\Helper\BodyParams;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Zend\Expressive\Helper\Exception\MalformedRequestBodyException;
 
 class BodyParamsMiddleware
 {
@@ -25,11 +26,12 @@ class BodyParamsMiddleware
      *
      * @var array
      */
-    private $nonBodyRequests = [
-        'GET',
-        'HEAD',
-        'OPTIONS',
-    ];
+    private $nonBodyRequests
+        = [
+            'GET',
+            'HEAD',
+            'OPTIONS',
+        ];
 
     /**
      * Constructor
@@ -64,8 +66,8 @@ class BodyParamsMiddleware
      * Adds JSON decoded request body to the request, where appropriate.
      *
      * @param ServerRequestInterface $request
-     * @param ResponseInterface $response
-     * @param callable $next
+     * @param ResponseInterface      $response
+     * @param callable               $next
      *
      * @return ResponseInterface
      */
@@ -77,13 +79,19 @@ class BodyParamsMiddleware
 
         $header = $request->getHeaderLine('Content-Type');
         foreach ($this->strategies as $strategy) {
-            if (! $strategy->match($header)) {
+            if (!$strategy->match($header)) {
                 continue;
+            }
+
+            try {
+                $request = $strategy->parse($request);
+            } catch (MalformedRequestBodyException $exception) {
+                return $response->withStatus(400);
             }
 
             // Matched! Parse and pass on to the next
             return $next(
-                $strategy->parse($request),
+                $request,
                 $response
             );
         }
