@@ -26,8 +26,7 @@ class BodyParamsMiddleware
      *
      * @var array
      */
-    private $nonBodyRequests
-        = [
+    private $nonBodyRequests = [
             'GET',
             'HEAD',
             'OPTIONS',
@@ -79,7 +78,7 @@ class BodyParamsMiddleware
 
         $header = $request->getHeaderLine('Content-Type');
         foreach ($this->strategies as $strategy) {
-            if (!$strategy->match($header)) {
+            if (! $strategy->match($header)) {
                 continue;
             }
 
